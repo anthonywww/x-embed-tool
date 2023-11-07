@@ -13,7 +13,7 @@ from utils import *
 from typing import Union, List, Any
 from urllib.parse import urlparse
 from gpt4all import GPT4All
-from qdrant_client import QdrantClient
+from qdrant_client import QdrantClient, models
 
 logger = logging.getLogger(__name__)
 
@@ -23,7 +23,7 @@ class Embed():
 
         self.qdrant_url = os.getenv("QDRANT_URL", "http://x-moderator-qdrant:6333")
         self.qdrant_api_key = os.getenv("QDRANT_API_KEY", None)
-        self.qdrant_api_key = os.getenv("QDRANT_COLLECTION_NAME", "x-moderator-vectors")
+        self.qdrant_collection = os.getenv("QDRANT_COLLECTION", "x-moderator-vectors")
         self.skip_integrity_check = os.getenv("SKIP_INTEGRITY_CHECK", False)
         
         threads = os.getenv("THREADS", 0)
@@ -41,9 +41,18 @@ class Embed():
         self.gpt4all = GPT4All(model_name=self.model_config["file"], model_path=self.model_path, model_type=self.model_config["type"] or None, n_threads=threads, allow_download=False, device=device)
         
         # Connect to qdrant
-        qdrant = parseurl(qdrant_url)
-
+        qdrant = urlparse(self.qdrant_url)
         self.qdrant = QdrantClient(url=f"{qdrant.scheme}://{qdrant.netloc}", port=qdrant.port, api_key=self.qdrant_api_key)
+
+        # TODO: check if collection exists
+        #self.qdrant.create_collection = creates it once, error on failure.
+        #self.qdrant.recreate_collection = deletes previous collection and creates a new one.
+        self.qdrant.recreate_collection(
+            collection_name=self.qdrant_collection,
+            vectors_config= {
+                text: models.VectorParams(size=self.model_config.vectors, distance=models.Distance.COSINE)
+            }
+        )
 
         try:
             # get all embeds from the embed.json config
@@ -75,8 +84,26 @@ class Embed():
                 vectors = self.gpt4all.model.generate_embedding(text)
                 logger.debug(f"Vectors: {vectors}")
 
-                # upload to qdrant
-                
+                ids = list(range(len(vectors)))
+
+                # prepare payload aux data
+                payload = {
+                    hash: hashlib.sha1(text).hexdigest(),
+                    category: category,
+                    weight: weight,
+                    action: action,
+                    notify: notify
+                }
+
+                # upload to qdrant collection
+                self.qdrant.upsert(
+                    collection_name=self.qdrant_collection,
+                    points=models.Batch(
+                        ids=ids,
+                        vectors=vectors.tolist(),
+                        payload=payload
+                    )
+                )
 
         except KeyboardInterrupt:
             pass
