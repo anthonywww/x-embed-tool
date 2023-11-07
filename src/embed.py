@@ -4,6 +4,7 @@ import os
 import sys
 import platform
 import json
+import uuid
 import logging
 import hashlib
 import requests
@@ -45,18 +46,25 @@ class Embed():
         self.qdrant = QdrantClient(url=f"{qdrant.scheme}://{qdrant.netloc}", port=qdrant.port, api_key=self.qdrant_api_key)
 
         if self.recreate_collection == False:
-            if not f"{self.qdrant_collection}" in self.qdrant.get_collections():
+            exists = False
+            for collection_tuple in self.qdrant.get_collections():
+                for collection in collection_tuple[1]:
+                    if collection.name == self.qdrant_collection:
+                        exists = True
+                        break
+
+            if not exists:
                 self.qdrant.create_collection(
                     collection_name=self.qdrant_collection,
                     vectors_config = {
-                        text: models.VectorParams(size=self.model_config.vectors, distance=models.Distance.COSINE)
+                        "text": models.VectorParams(size=self.model_config["vectors"], distance=models.Distance.COSINE)
                     }
                 )
         else:
             self.qdrant.recreate_collection(
                 collection_name=self.qdrant_collection,
                 vectors_config = {
-                    text: models.VectorParams(size=self.model_config.vectors, distance=models.Distance.COSINE)
+                    "text": models.VectorParams(size=self.model_config["vectors"], distance=models.Distance.COSINE)
                 }
             )
 
@@ -68,6 +76,8 @@ class Embed():
             content = fp.read()
             fp.close()
             embeds = json.loads(content)
+            points = []
+            existing_hashes_field_conditions = []
 
             for embed in embeds:
                 text = embed["text"]
@@ -88,36 +98,66 @@ class Embed():
                 if "notify" in embed:
                     notify = embed["notify"]
 
-                logger.info(f"Embedding {len(text)} chars as {category} with {weight} weight {action} action and will notify = {notify}: '{text}'")
-                vectors = self.gpt4all.model.generate_embedding(text)
-                logger.debug(f"Vectors: {vectors}")
-
-                ids = list(range(len(vectors)))
+                notify_msg = ""
+                if notify:
+                    notify_msg = " and WILL notify moderators"
+                
+                logger.info(f"Embedding {len(text)} chars as [{category}] with a weight of {weight}, action of {action}{notify_msg}: '{text}'")
+                vec = self.gpt4all.model.generate_embedding(text)
+                logger.debug(f"Vector({len(vec)}): {vec}")
 
                 # prepare payload aux data
                 payload = {
-                    hash: hashlib.sha1(text).hexdigest(),
-                    category: category,
-                    weight: weight,
-                    action: action,
-                    notify: notify
+                    "hash": hashlib.sha1(text.encode("utf-8")).hexdigest(),
+                    "text": text,
+                    "category": category,
+                    "weight": weight,
+                    "action": action,
+                    "notify": notify
                 }
 
-                # upload to qdrant collection
-                self.qdrant.upsert(
+                # create data point
+                point = models.PointStruct(
+                    id=f"{str(uuid.uuid4())}",
+                    payload=payload,
+                    vector= {
+                        "text": vec
+                    }
+                )
+
+                field_condition = models.FieldCondition(
+                    key="hash",
+                    match=models.MatchValue(value=payload["hash"]),
+                )
+
+                points.append(point)
+                existing_hashes_field_conditions.append(field_condition)
+
+
+
+            # Delete all existing hashes from the db before inserting new values
+            if len(existing_hashes_field_conditions) > 0:
+                self.qdrant.delete(
                     collection_name=self.qdrant_collection,
-                    points=models.Batch(
-                        ids=ids,
-                        vectors=vectors.tolist(),
-                        payload=payload
+                    points_selector=models.FilterSelector(
+                        filter=models.Filter(
+                            should=existing_hashes_field_conditions
+                        )
                     )
                 )
 
+            # upload all our new points to the qdrant collection
+            self.qdrant.upsert(
+                collection_name=self.qdrant_collection,
+                points=points
+            )
+
         except KeyboardInterrupt:
+            print("") # get rid of annoying '^C' print
+            logger.info(f"Stopping!")
             pass
 
-        print("") # get rid of annoying '^C' print
-        logger.info(f"Shutting down!")
+
 
 
     def embed(self, text:str) -> List[float]:

@@ -37,7 +37,6 @@ RUN git clone --recurse-submodules https://github.com/nomic-ai/gpt4all \
 RUN echo "CMAKE_ARGS=${CMAKE_ARGS:-}" \
 	&& cd ~/gpt4all/gpt4all-backend/build \
 	&& cmake .. ${CMAKE_ARGS} \
-	&& cmake -L \
 	&& cmake --build . --parallel --config Release \
 	&& cd ../../gpt4all-bindings/python \
 	&& pip install -e . --break-system-packages \

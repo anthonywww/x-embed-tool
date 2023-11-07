@@ -24,6 +24,12 @@ The following table represents valid parameters to set per entry in the embed.js
 
 ### Usage
 
+#### Create a network for x-moderator
+```sh
+docker network create x-moderator
+```
+
+
 #### Create and run a Qdrant DB
 
 See more configuration options here:
@@ -39,6 +45,7 @@ cp config/qdrant.yaml.example config/qdrant.yaml
 
 # Run
 docker run -d \
+	--net x-moderator \
 	--name x-moderator-qdrant \
 	-h x-moderator-qdrant \
 	-e QDRANT__TELEMETRY_DISABLED="true" \
@@ -70,8 +77,9 @@ cp config/embed.json.example config/embed.json
 
 # Run
 docker run --rm -it \
-	-e QDRANT_URL="" \
-	-e QDRANT_API_KEY="" \
+	--net x-moderator \
+	-e ENV_VAR_1="123" \
+	-e ENV_VAR_2="456" \
 	-u "$(id -u):$(id -g)" \
 	-v "$(pwd):/home/xembedtool/" \
 	x-embed-tool
