@@ -1,0 +1,8 @@
+bin/
+src/__pycache__
+.DS_Store
+Thumbs.db
+model/
+qdrant/
+config/*
+!config/*.example

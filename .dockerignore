@@ -1,0 +1,8 @@
+model/
+bin/
+src/
+qdrant/
+*.json
+*.sh
+*.md
+LICENSE
