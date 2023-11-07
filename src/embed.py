@@ -25,6 +25,7 @@ class Embed():
         self.qdrant_api_key = os.getenv("QDRANT_API_KEY", None)
         self.qdrant_collection = os.getenv("QDRANT_COLLECTION", "x-moderator-vectors")
         self.skip_integrity_check = os.getenv("SKIP_INTEGRITY_CHECK", False)
+        self.recreate_collection = os.getenv("RECREATE_COLLECTION", False)
         
         threads = os.getenv("THREADS", 0)
         device = os.getenv("DEVICE", "cpu")
@@ -33,7 +34,6 @@ class Embed():
         # Load model config
         self.model_config = self._load_model_config()
         logger.debug(f"Model config: {self.model_config}")
-
 
         # Load embedding model
         logging.getLogger("gpt4all.gpt4all").setLevel(logging.CRITICAL)
@@ -44,15 +44,23 @@ class Embed():
         qdrant = urlparse(self.qdrant_url)
         self.qdrant = QdrantClient(url=f"{qdrant.scheme}://{qdrant.netloc}", port=qdrant.port, api_key=self.qdrant_api_key)
 
-        # TODO: check if collection exists
-        #self.qdrant.create_collection = creates it once, error on failure.
-        #self.qdrant.recreate_collection = deletes previous collection and creates a new one.
-        self.qdrant.recreate_collection(
-            collection_name=self.qdrant_collection,
-            vectors_config= {
-                text: models.VectorParams(size=self.model_config.vectors, distance=models.Distance.COSINE)
-            }
-        )
+        if self.recreate_collection == False:
+            if not f"{self.qdrant_collection}" in self.qdrant.get_collections():
+                self.qdrant.create_collection(
+                    collection_name=self.qdrant_collection,
+                    vectors_config = {
+                        text: models.VectorParams(size=self.model_config.vectors, distance=models.Distance.COSINE)
+                    }
+                )
+        else:
+            self.qdrant.recreate_collection(
+                collection_name=self.qdrant_collection,
+                vectors_config = {
+                    text: models.VectorParams(size=self.model_config.vectors, distance=models.Distance.COSINE)
+                }
+            )
+
+        logger.info(f"Successfully connected to {self.qdrant_url}")
 
         try:
             # get all embeds from the embed.json config
@@ -183,6 +191,7 @@ class Embed():
 
             # Check the file hash against what was downloaded
             if self.skip_integrity_check == False:
+                logger.info(f"Checking model integrity: {filename} ...")
                 if self._check_hash(filename, hash):
                     logger.info(f"Verified model integrity: {filename}")
                     valid = True

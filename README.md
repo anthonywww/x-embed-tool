@@ -48,6 +48,7 @@ docker run -d \
 	qdrant/qdrant
 ```
 
+You may navigate to http://localhost:6333/dashboard#/collections to view the collections via the built-in dashboard.
 
 #### Build Docker Image
 
@@ -86,3 +87,4 @@ docker run --rm -it \
 | THREADS                    | 0                               | Number of threads to use for generating embeddings. If 0, it will use all available.   |
 | DEVICE                     | cpu                             | Device to use for generating embeddings.                                               |
 | SKIP_INTEGRITY_CHECK       |                                 | If set to 1, the model integrity check will be skipped.                                |
+| RECREATE_COLLECTION        |                                 | If set to 1, the collection will be **deleted** and re-created.                        |

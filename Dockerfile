@@ -17,7 +17,7 @@ ADD requirements.txt .
 RUN pip install -r requirements.txt --break-system-packages
 
 # Create user
-RUN useradd -m xembedtool
+RUN useradd -s /bin/bash -m xembedtool
 
 WORKDIR /home/xembedtool
 
@@ -28,15 +28,17 @@ USER xembedtool
 RUN echo "export PATH='${PATH}:~/.local/bin'" >> ~/.profile \
 	&& . ~/.profile
 
-ARG APPLE_ARM
-ENV APPLE_ARM "${APPLE_ARM}"
+ARG CMAKE_ARGS
+ENV CMAKE_ARGS "${CMAKE_ARGS}"
 RUN git clone --recurse-submodules https://github.com/nomic-ai/gpt4all \
 	&& cd gpt4all/gpt4all-backend/ \
 	&& mkdir build \
 	&& cd build
-RUN echo "APPLE_ARM=${APPLE_ARM:-0}" \
-	&& cmake -DAPPLE:STRING="${APPLE_ARM}" .. \
-	&& cmake -DAPPLE:STRING="${APPLE_ARM}" --build . --parallel --config Release \
+RUN echo "CMAKE_ARGS=${CMAKE_ARGS:-}" \
+	&& cd ~/gpt4all/gpt4all-backend/build \
+	&& cmake .. ${CMAKE_ARGS} \
+	&& cmake -L \
+	&& cmake --build . --parallel --config Release \
 	&& cd ../../gpt4all-bindings/python \
 	&& pip install -e . --break-system-packages \
 	&& cd ~/ \
