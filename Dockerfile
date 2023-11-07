@@ -27,12 +27,16 @@ USER xembedtool
 # Build pip dependences and install gpt4all for python
 RUN echo "export PATH='${PATH}:~/.local/bin'" >> ~/.profile \
 	&& . ~/.profile
+
+ARG APPLE_ARM
+ENV APPLE_ARM "${APPLE_ARM}"
 RUN git clone --recurse-submodules https://github.com/nomic-ai/gpt4all \
 	&& cd gpt4all/gpt4all-backend/ \
 	&& mkdir build \
-	&& cd build \
-	&& cmake .. \
-	&& cmake --build . --parallel --config Release \
+	&& cd build
+RUN echo "APPLE_ARM=${APPLE_ARM:-0}" \
+	&& cmake -DAPPLE:STRING="${APPLE_ARM}" .. \
+	&& cmake -DAPPLE:STRING="${APPLE_ARM}" --build . --parallel --config Release \
 	&& cd ../../gpt4all-bindings/python \
 	&& pip install -e . --break-system-packages \
 	&& cd ~/ \
