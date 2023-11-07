@@ -10,8 +10,10 @@ import requests
 import traceback
 
 from utils import *
-from typing import Any, Dict, List, Optional, Union
+from typing import Union, List, Any
+from urllib.parse import urlparse
 from gpt4all import GPT4All
+from qdrant_client import QdrantClient
 
 logger = logging.getLogger(__name__)
 
@@ -19,8 +21,9 @@ class Embed():
 
     def __init__(self):
 
-        self.qdrant_host = os.getenv("QDRANT_HOST", "http://x-moderator-qdrant:6333")
+        self.qdrant_url = os.getenv("QDRANT_URL", "http://x-moderator-qdrant:6333")
         self.qdrant_api_key = os.getenv("QDRANT_API_KEY", None)
+        self.qdrant_api_key = os.getenv("QDRANT_COLLECTION_NAME", "x-moderator-vectors")
         self.skip_integrity_check = os.getenv("SKIP_INTEGRITY_CHECK", False)
         
         threads = os.getenv("THREADS", 0)
@@ -38,7 +41,9 @@ class Embed():
         self.gpt4all = GPT4All(model_name=self.model_config["file"], model_path=self.model_path, model_type=self.model_config["type"] or None, n_threads=threads, allow_download=False, device=device)
         
         # Connect to qdrant
+        qdrant = parseurl(qdrant_url)
 
+        self.qdrant = QdrantClient(url=f"{qdrant.scheme}://{qdrant.netloc}", port=qdrant.port, api_key=self.qdrant_api_key)
 
         try:
             # get all embeds from the embed.json config

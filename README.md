@@ -69,7 +69,7 @@ cp config/embed.json.example config/embed.json
 
 # Run
 docker run --rm -it \
-	-e QDRANT_HOST="" \
+	-e QDRANT_URL="" \
 	-e QDRANT_API_KEY="" \
 	-u "$(id -u):$(id -g)" \
 	-v "$(pwd):/home/xembedtool/" \
@@ -80,5 +80,9 @@ docker run --rm -it \
 
 | Name                       | Default                         | Description                                                                            |
 |----------------------------|---------------------------------|----------------------------------------------------------------------------------------|
-| QDRANT_HOST                | http://x-moderator-qdrant:6333  | Qdrant hostname and port.                                                              |
+| QDRANT_URL                 | http://x-moderator-qdrant:6333  | Qdrant url with port.                                                                  |
 | QDRANT_API_KEY             |                                 | If required, set the API key to use.                                                   |
+| QDRANT_COLLECTION          | x-moderator-vectors             | Collection name (table).                                                               |
+| THREADS                    | 0                               | Number of threads to use for generating embeddings. If 0, it will use all available.   |
+| DEVICE                     | cpu                             | Device to use for generating embeddings.                                               |
+| SKIP_INTEGRITY_CHECK       |                                 | If set to 1, the model integrity check will be skipped.                                |
