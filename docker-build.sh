@@ -4,4 +4,5 @@
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 cd $DIR
 
-docker build -t x-embed-tool:latest .
+docker build --platform linux/amd64 \
+    -t x-embed-tool:latest .
