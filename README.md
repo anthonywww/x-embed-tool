@@ -35,7 +35,7 @@ See more configuration options here:
 mkdir -p qdrant/
 
 # Copy default configs
-cp config/qdrant_config.yaml.example config/qdrant_config.yaml
+cp config/qdrant.yaml.example config/qdrant.yaml
 
 # Run
 docker run -d \
