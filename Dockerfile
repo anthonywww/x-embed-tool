@@ -43,4 +43,4 @@ RUN echo "CMAKE_ARGS=${CMAKE_ARGS:-}" \
 	&& cd ~/ \
 	&& rm -rf gpt4all/
 
-CMD python3 src/embed.py
+CMD python3 src/main.py
