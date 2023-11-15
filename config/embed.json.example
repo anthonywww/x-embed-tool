@@ -45,5 +45,26 @@
 		"text": "fuck you",
 		"category": "swearing",
 		"notify": true
+	},
+	{
+		"text": "let's connect",
+	},
+	{
+		"text": "lets connect",
+	},
+	{
+		"text": "let's conect",
+	},
+	{
+		"text": ".",
+	},
+	{
+		"text": "Why?",
+	},
+	{
+		"text": "Why",
+	},
+	{
+		"text": "#100DaysOfCode"
 	}
 ]
